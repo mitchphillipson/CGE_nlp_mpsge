@@ -138,18 +138,23 @@ function NLP_model(data::ModelData)
 
 
 
-    @objective(GSS, Min, Q)
+    @objective(GSS, Max, Q)
 
     @constraints(GSS, begin
         OUTPUT, X == A * ((alpha*(E^h)) + ((1-alpha)*(DS^h)))^(1/h);
         CONS, Q == B*(((beta*(M^(-rho))) + ((1-beta)*(DD^(-rho))))^(-1/rho));
+
         EXPRAT, E == DS*((PED/PDD)*((1-alpha)/alpha))^omega;
         IMPRAT, M == DD*((PDT/PMD)*(beta/(1-beta)))^sigma;
-        EXCH, PED == ER*PWE*(1+TE);
-        PEXP, PX == (PED*E + PDD*DS)/X;
-        PIMP, PMD == PWM*ER*(1+TM);
+
+        PEXP, X*PX == (PED*E + PDD*DS);
         PDOM, PDT*DD + PMD*M == PQ*Q;
+
+        EXCH, PED == ER*PWE*(1+TE); 
+        PIMP, PMD == PWM*ER*(1+TM);
+        
         PDTEQ, PDT == (1+TD)*PDD;
+
         GREQ, GR == (TM*ER*PWM*M) + (TD*PDD*DD) - (TE*ER*PWE*E);
         YEQ, Y == (PX*X) + (ER*BBAR) + GR;
         G, X == X0;
