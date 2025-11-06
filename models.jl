@@ -167,7 +167,7 @@ function NLP_model(data::ModelData)
     return GSS
 end
 
-function NLP_report(M::JuMP.Model)
+function report(M::JuMP.Model)
     return DataFrame([
     (
         sigma = value(M[:sigma]),
@@ -175,6 +175,11 @@ function NLP_report(M::JuMP.Model)
         BBAR = value(M[:BBAR]),
         PWM = value(M[:PWM]),
         PWE = value(M[:PWE]),
+        TX = value(M[:TE]),
+        TM = value(M[:TM]),
+        TD = value(M[:TD]),
+        PED = value(M[:PED]),
+        PMD = value(M[:PMD]),
         Q = value(M[:Q]),
         PD = value(M[:PDD]),
         TCR = value(M[:PED]/M[:PDD]),

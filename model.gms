@@ -131,6 +131,10 @@ solve GSS using NLP maximizing Q;
 * Dutch Disease
 $Title Dutch Disease Scenario
 BBAR = 10;
+PWE = 1.1;
+PWM = 1.0;
+
+
 solve GSS using NLP maximizing Q;
 
 

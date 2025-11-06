@@ -1,8 +1,29 @@
-using MPSGE
 
+function MPSGE_model(data::ModelData)
 
-begin
+    E0 = data.initial_exports
+    M0 = data.initial_imports
+    X0 = data.initial_production
+    Q0 = data.initial_consumption
+    D0 = data.domestic_demand
+    P0 = data.initial_consumer_price_index
+    PDD0 = data.initial_domestic_price
+    PWE0 = data.initial_world_export_price
+    PWM0 = data.initial_world_import_price
+
     MP = MPSGEModel()
+
+    @parameters(MP, begin
+        sigma, .2
+        omega, .2
+        BBAR, 0.0
+
+        PWE, PWE0
+        PWM, PWM0
+        TM, 0.0
+        TE, 0.0
+        TD, 0.0
+    end)
 
     @sectors(MP, begin
         X
@@ -17,40 +38,84 @@ begin
     end)
 
     @consumers(MP, begin
-        world
+        #world
         Y
     end)
 
 
-    @production(MP, X, [s=.2,t=0], begin
-        @output(PX, 100, t)
-        @input(PFX, 25, s)
-        @input(PDT, 75, s)
+    @production(MP, X, [t=omega,s=0], begin
+        @output(PFX, E0*PWE, t, reference_price = 1/PWE, taxes = [Tax(Y, -TE)]) # Negative tax for export subsidy
+        @output(PDT, D0, t)
+        @input(PX, X0, s)
     end)
 
 
-    @production(MP, Q, [s=0,t=.2], begin
-        @output(PFX, 25, t)
-        @output(PDT, 75, t)
-        @input(PQ, 100, s)
-    end)
-
-
-    @demand(MP, world, begin
-        @final_demand(PFX, 25) #export
-        @endowment(PFX, 25) #import
+    @production(MP, Q, [t=0,s=sigma], begin
+        @output(PQ, Q0, t)
+        @input(PFX, M0*PWM, s, reference_price = 1/PWM, taxes = [Tax(Y, TM)])
+        @input(PDT, D0, s, taxes = [Tax(Y, TD)])
+        
     end)
 
     @demand(MP, Y, begin
-        @final_demand(PFX, 0)
-        @final_demand(PX, 100)
-        @endowment(PQ, 100)
+        @final_demand(PQ, Q0)
+        @endowment(PX, X0)
+        @endowment(PFX, BBAR)
     end)
+
+    fix(PQ, 1)
+
+    return MP
 end
 
-fix(MP[:PQ], 1)
 
-solve!(MP)
+function set_parameter_values(M::MPSGEModel, params::NLPModelParameters)
+    set_value!(M[:sigma], params.sigma)
+    set_value!(M[:omega], params.omega)
+    set_value!(M[:BBAR], params.BBAR)
+    set_value!(M[:PWE], params.PWE)
+    set_value!(M[:PWM], params.PWM)
+    set_value!(M[:TM], params.TM)
+    set_value!(M[:TE], params.TE)
+    set_value!(M[:TD], params.TD)
+end
 
 
-value(MP[:PFX])
+function report(M::MPSGEModel)
+
+    PDD = value(M[:PDT])#*(1 - M[:TD]))
+    DD = value(compensated_demand(M[:Q], M[:PDT];virtual=true)*M[:Q]/M[:PQ])
+
+
+    PED = value(M[:PFX]*(1 + M[:TE])*M[:PWE])
+    PMD = value(M[:PFX]*(1 + M[:TM])*M[:PWM])
+
+    E = -value(compensated_demand(M[:X], M[:PFX];virtual=true)*M[:X]/(M[:PQ]*M[:PWE]))
+    imp = value(compensated_demand(M[:Q], M[:PFX];virtual=true)*M[:Q]/(M[:PQ]*M[:PWM]))
+
+
+    return DataFrame([
+    (
+        sigma = value(M[:sigma]),
+        omega = value(M[:omega]),
+        BBAR = value(M[:BBAR]),
+        PWM = value(M[:PWM]),
+        PWE = value(M[:PWE]),
+        TX = value(M[:TE]),
+        TM = value(M[:TM]),
+        TD = value(M[:TD]),
+        PED = PED,
+        PMD = PMD,
+        Q = -value(compensated_demand(M[:Q], M[:PQ])*M[:Q]),
+        PD = PDD,
+        TCR =  PED/PDD,
+        TCRE = PED/PDD,
+        TCRM = PMD/PDD,
+        TCERQ = value(M[:PFX]/M[:PQ]),
+        TCERX = value(M[:PFX]/M[:PX]),
+        TCN = value(M[:PFX]/M[:PQ]),
+        E = E,
+        DD = DD,
+        M = imp,
+    )])
+end
