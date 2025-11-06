@@ -15,7 +15,7 @@ begin
     M = NLP_model(data)
     MP = MPSGE_model(data)
 
-    params = NLPModelParameters(sigma=.2, omega=15, BBAR=10, PWE=1.2, PWM = 1.1, TD = .5, TE = .01, TM = .1)
+    params = NLPModelParameters(sigma=.2, omega=.2, BBAR=10)#, PWE=1.2, PWM = 1.1, TD = .5, TE = .01, TM = .1)
     set_parameter_values(M, params)
     set_parameter_values(MP, params)
 
